@@ -1,157 +1,161 @@
 import React from 'react'
 import { FormattedMessage } from 'react-intl'
+import { Field, reduxForm } from 'redux-form'
 import styled from 'styled-components'
 
-import { utils } from '@core'
 import {
   Button,
   Modal,
   ModalBody,
   ModalFooter,
   ModalHeader,
-  SelectInput,
-  Text
+  Text,
+  TooltipHost,
+  TooltipIcon
 } from 'blockchain-info-components'
-import CoinDisplay from 'components/Display/CoinDisplay'
-import QRCodeWrapper from 'components/QRCode/Wrapper'
-import { flex, spacing } from 'services/styles'
+import Form from 'components/Form/Form'
+import FormGroup from 'components/Form/FormGroup'
+import FormItem from 'components/Form/FormItem'
+import SelectBoxBtcAddresses from 'components/Form/SelectBoxBtcAddresses'
+import TextBox from 'components/Form/TextBox'
+import QRCodeCapture from 'components/QRCode/Capture'
+import { required, validBtcPrivateKey } from 'services/forms'
+import { removeWhitespace } from 'services/forms/normalizers'
+import { spacing } from 'services/styles'
 
-const DropdownWrapper = styled.div`
-  position: relative;
-  width: 60%;
-  height: auto;
-  background-color: ${(props) => props.theme.white};
+const Wrapper = styled.div`
+  font-weight: 400;
+  color: ${(props) => props.theme.grey700};
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu,
+    Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
 `
-
-const DetailTable = styled.div`
-  min-width: 0;
-  > div {
-    word-break: break-word;
-  }
-  > div:not(:first-child) {
-    margin-top: 10px;
-  }
-`
-const DetailRow = styled.div`
+const Row = styled.div`
   display: flex;
+  justify-content: center;
   align-items: center;
-  flex-direction: row;
-  flex-wrap: wrap;
+  width: 100%;
 `
-const DetailRowText = styled(Text)`
-  white-space: nowrap;
+const LabelText = styled(Text)`
+  margin-bottom: 9px;
 `
-const KeyText = styled(Text)`
-  min-width: 0;
-  word-wrap: break-word;
+const ImportFormItem = styled(FormItem)`
+  margin-bottom: 32px;
+`
+const BorderRow = styled(Row)`
+  input {
+    border-radius: 8px 0 0 8px;
+  }
+
+  > div {
+    border-radius: 0 8px 8px 0;
+  }
+`
+const Tooltip = styled(TooltipHost)`
+  & > span {
+    font-size: 12px;
+  }
+`
+const Label = styled.label`
+  display: flex;
+`
+const ImportHeader = styled(ModalHeader)`
+  border-bottom: 0;
+  padding-bottom: 8px;
+
+  > div:first-child * {
+    font-weight: 500;
+    color: ${(props) => props.theme.grey800};
+  }
+`
+const ImportFooter = styled(ModalFooter)`
+  border-top: 0;
 `
 
-const KeySelectInput = styled(SelectInput)`
-  flex: 1;
-`
+const ImportBtcAddress = ({ handleSubmit, invalid, onClose, position, priv, submitting }) => (
+  <Modal size='large' position={position}>
+    <Form onSubmit={handleSubmit}>
+      <Wrapper>
+        <ImportHeader onClose={onClose}>
+          <FormattedMessage id='modals.importkey.import' defaultMessage='Import Private Key' />
+        </ImportHeader>
+        <ModalBody>
+          <FormGroup>
+            <ImportFormItem width='100%'>
+              <Label htmlFor='addrOrPriv'>
+                <LabelText color='grey600' size='14px' weight={500}>
+                  <FormattedMessage
+                    id='modals.importkey.label.privatekey'
+                    defaultMessage='Enter your private key'
+                  />
+                </LabelText>
+                <Tooltip id='import.privatekeys' data-place='right' style={{ marginTop: '3px' }}>
+                  <TooltipIcon name='info' />
+                </Tooltip>
+              </Label>
+              <BorderRow>
+                <Field
+                  name='addrOrPriv'
+                  validate={[validBtcPrivateKey, required]}
+                  normalize={removeWhitespace}
+                  component={TextBox}
+                  data-e2e='privateKeyInput'
+                />
+                <QRCodeCapture scanType='btcPrivOrAddress' border={['top', 'bottom', 'right']} />
+              </BorderRow>
+            </ImportFormItem>
+            <ImportFormItem width='100%'>
+              <Label htmlFor='addrOrPriv'>
+                <LabelText color='grey600' size='14px' weight={500}>
+                  <FormattedMessage
+                    id='modals.importkey.label.enterlabel'
+                    defaultMessage='Enter a label (optional)'
+                  />
+                </LabelText>
+              </Label>
+              <Row>
+                <Field name='label' validate={[]} component={TextBox} data-e2e='labelInput' />
+              </Row>
+            </ImportFormItem>
+            <ImportFormItem style={spacing('mt-10')}>
+              <Label htmlFor='wallets'>
+                <LabelText color='grey600' size='14px' weight={500}>
+                  <FormattedMessage
+                    id='modals.importkey.label.transferfunds'
+                    defaultMessage='Transfer funds to an existing wallet (optional)'
+                  />
+                </LabelText>
+              </Label>
+              <Row>
+                <Field
+                  name='to'
+                  component={SelectBoxBtcAddresses}
+                  optional
+                  excludeImported
+                  includeAll={false}
+                  disabled={!priv}
+                />
+              </Row>
+            </ImportFormItem>
+          </FormGroup>
+        </ModalBody>
 
-const FirstStep = () => (
-  <div>
-    <Text size='13px' color='error' weight={500} uppercase>
-      <FormattedMessage id='modals.showbtcpriv.warning' defaultMessage='Warning' />
-    </Text>
-    <Text size='14px' style={spacing('mt-10')} weight={400}>
-      <FormattedMessage
-        id='modals.showbtcpriv.warning.message'
-        defaultMessage="Don't share your private key with anyone. This may result in a loss of funds."
-      />
-    </Text>
-  </div>
-)
-
-const SecondStep = ({ addr, balance, format, formats, onChangeFormat, priv }) => (
-  <div style={flex('row')}>
-    <div style={spacing('mr-25')}>
-      <QRCodeWrapper value={priv} size={120} />
-    </div>
-    <DetailTable>
-      <DetailRow>
-        <DetailRowText size='14px' weight={500}>
-          <FormattedMessage id='copy.balance' defaultMessage='Balance' />
-        </DetailRowText>
-        : &nbsp;
-        <CoinDisplay coin='BTC' size='14px'>
-          {balance}
-        </CoinDisplay>
-      </DetailRow>
-      <DetailRow>
-        <DetailRowText size='14px' weight={500}>
-          <FormattedMessage id='copy.address' defaultMessage='Address' />
-        </DetailRowText>
-        : &nbsp;
-        <Text size='14px' weight={400} data-e2e='btcAddressValue'>
-          {addr}
-        </Text>
-      </DetailRow>
-      <DetailRow>
-        <DetailRowText size='14px' weight={500}>
-          <FormattedMessage id='copy.private_key' defaultMessage='Private Key' />
-        </DetailRowText>
-        : &nbsp;
-        {utils.btc.formatPrivateKeyString(priv, format, addr).fold(
-          (error) => (
-            <Text size='14px' weight={400} color='error'>
-              {error.message}
-            </Text>
-          ),
-          (keyString) => (
-            <KeyText size='14px' weight={400} data-e2e='btcPrivateKeyValue'>
-              {keyString}
-            </KeyText>
-          )
-        )}
-      </DetailRow>
-      <DetailRow>
-        <DetailRowText size='14px' weight={500}>
-          <FormattedMessage
-            id='modals.showbtcpriv.priv_key_format'
-            defaultMessage='Private Key Format'
-          />
-        </DetailRowText>
-        : &nbsp;
-        <DropdownWrapper data-e2e='dropdownSelect'>
-          <KeySelectInput
-            label='Export Format'
-            value={format}
-            searchEnabled={false}
-            onChange={onChangeFormat}
-            elements={formats}
-          />
-        </DropdownWrapper>
-      </DetailRow>
-    </DetailTable>
-  </div>
-)
-
-const ShowBtcPrivateKeyTemplate = ({ close, onContinue, position, step, total, ...rest }) => (
-  <Modal size='large' position={position} total={total}>
-    <ModalHeader icon='lock' closeButton={false}>
-      <FormattedMessage id='copy.private_key' defaultMessage='Private Key' />
-    </ModalHeader>
-    <ModalBody>{step === 0 ? <FirstStep /> : <SecondStep {...rest} />}</ModalBody>
-    <ModalFooter align='right'>
-      <Text
-        cursor='pointer'
-        size='small'
-        weight={400}
-        style={spacing('mr-15')}
-        onClick={close}
-        data-e2e='btcPrivateKeyCloseButton'
-      >
-        <FormattedMessage id='buttons.close' defaultMessage='Close' />
-      </Text>
-      {step === 0 && (
-        <Button nature='primary' onClick={onContinue} data-e2e='btcPrivateKeyContinueButton'>
-          <FormattedMessage id='buttons.continue' defaultMessage='Continue' />
-        </Button>
-      )}
-    </ModalFooter>
+        <ImportFooter align='right'>
+          <Button
+            type='submit'
+            nature='primary'
+            capitalize
+            disabled={submitting || invalid}
+            data-e2e='importButton'
+          >
+            <FormattedMessage id='modals.importkey.import' defaultMessage='Import Private Key' />
+          </Button>
+        </ImportFooter>
+      </Wrapper>
+    </Form>
   </Modal>
 )
 
-export default ShowBtcPrivateKeyTemplate
+export default reduxForm({
+  form: 'importBtcAddress',
+  initialValues: { 'address-type': '' }
+})(ImportBtcAddress)
