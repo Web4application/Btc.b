@@ -1,4 +1,9 @@
-# Sequencing Modules (/en/docs/syndicate-stack/core-concepts/sequencing-modules)
+==================
+brc.b
+=================
+
+
+>.. Sequencing Modules (/en/docs/syndicate-stack/core-concepts/sequencing-modules):
 
 Syndicate transforms blockchain sequencing by bringing it onchain through smart contracts deployed on a separate blockchain. This modular approach enables unprecedented control, transparency, and community ownership of the transaction ordering process.
 
@@ -130,7 +135,7 @@ Atomic modules enable coordinated transaction processing across multiple chains,
 
 * **Atomic Sequencer**: Process transactions across multiple chains atomically
 
-#### Example: Atomic Sequencer
+>#### Example: Atomic Sequencer
 
 ```solidity
 contract AtomicSequencer {
